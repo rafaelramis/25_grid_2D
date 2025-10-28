@@ -1,5 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+#include "D.h"
 
 /*-------------------------------------------------------------
   Parallel curve generator
@@ -126,23 +128,102 @@ int build_parallel_curve(
 }
 
 /*-------------------------------------------------------------
-  Example test program
+  Simplified wrapper for parallel curve generation
+  All parameters are pointers to type D structures
+  Returns: D structure containing a list with the parallel curves x0,y0
 -------------------------------------------------------------*/
-int main(void) {
-    /* Simple test polyline forming an L shape */
-    double x[] = {0.0, 1.0, 1.0};
-    double y[] = {0.0, 0.0, 1.0};
-    int n = 3;
+D *_parallel5(D *x, D *y, D *h, D *lmin, D *lmax) {
+    // Check if there were errors in upper levels
+    if (DError) {
+        // Free all arguments
+        DLibera(x);
+        DLibera(y);
+        DLibera(h);
+        DLibera(lmin);
+        DLibera(lmax);
+        return DCreaNulo();
+    }
 
-    double h = 0.1;
-    double lmin = 0.05, lmax = 0.5;
+    // Check that all arguments are of type double
+    if (x->t != D_TIPO_DOUBLE || y->t != D_TIPO_DOUBLE || 
+        h->t != D_TIPO_DOUBLE || lmin->t != D_TIPO_DOUBLE || 
+        lmax->t != D_TIPO_DOUBLE) {
+        DError("parallel : bad argument type");
+        // Free all arguments
+        DLibera(x);
+        DLibera(y);
+        DLibera(h);
+        DLibera(lmin);
+        DLibera(lmax);
+        return DCreaNulo();
+    }
 
-    double x0[100], y0[100];
-    int m = build_parallel_curve(x, y, n, h, lmin, lmax, x0, y0, 100);
+    // Check sizes of arguments
+    if (x->n != y->n || h->n != 1 || lmin->n != 1 || lmax->n != 1) {
+        DError("parallel : bad argument size");
+        // Free all arguments
+        DLibera(x);
+        DLibera(y);
+        DLibera(h);
+        DLibera(lmin);
+        DLibera(lmax);
+        return DCreaNulo();
+    }
 
-    printf("Generated %d offset points:\n", m);
-    for (int i = 0; i < m; i++)
-        printf("  %2d : (%8.4f, %8.4f)\n", i+1, x0[i], y0[i]);
+    const int nmax = 1000;  // Maximum number of output points
+    int n = x->n;          // Get number of points from x structure
+    
+    // Get pointers to the data arrays from the input structures
+    double *xd = x->p.d;
+    double *yd = y->p.d;
+    
+    // Allocate temporary arrays for build_parallel_curve output
+    double *x0d = malloc(nmax * sizeof(double));
+    double *y0d = malloc(nmax * sizeof(double));
+    
+    // Get the scalar values from the D structures
+    double hd = h->p.d[0];
+    double lmin_val = lmin->p.d[0];
+    double lmax_val = lmax->p.d[0];
+    
+    // Call the original function with the data arrays and parameter values
+    int result = build_parallel_curve(xd, yd, n, hd, lmin_val, lmax_val, x0d, y0d, nmax);
 
-    return 0;
+    // Create D structures for the output using the result size
+    D *x0 = NULL;
+    D *y0 = NULL;
+    D *output = NULL;
+
+    if (result > 0) {
+        // Create D structures with the exact size needed
+        x0 = DCreaDouble(result);
+        y0 = DCreaDouble(result);
+
+        // Copy the data to the D structures
+        for(int i = 0; i < result; i++) {
+            x0->p.d[i] = x0d[i];
+            y0->p.d[i] = y0d[i];
+        }
+
+        // Create the output list and insert the structures
+        output = DCreaLista();
+        DInserta(output, x0);
+        DInserta(output, y0);
+    } else {
+        // Create a null structure if no result
+        output = DCreaNulo();
+    }
+
+    // Free temporary arrays
+    free(x0d);
+    free(y0d);
+    
+    // Free all input arguments
+    DLibera(x);
+    DLibera(y);
+    DLibera(h);
+    DLibera(lmin);
+    DLibera(lmax);
+    
+    return output;
 }

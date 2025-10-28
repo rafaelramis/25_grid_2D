@@ -18,6 +18,7 @@ int triangula_banda_area(
     int i1=0, i2=0;
 
     while(i1<n1-1 || i2<n2-1){
+        printf("i1=%d n1=%d i2=%d n2=%d\n", i1, n1, i2, n2);
         if(i1 == n1-1){
             triangles[t++] = idx1[i1];
             triangles[t++] = idx2[i2];
@@ -35,6 +36,7 @@ int triangula_banda_area(
 
         double area1 = area2D(x1[i1],y1[i1], x1[i1+1],y1[i1+1], x2[i2],y2[i2]);
         double area2 = area2D(x1[i1],y1[i1], x2[i2],y2[i2], x2[i2+1],y2[i2+1]);
+        printf("area1=%f area2=%f\n", area1, area2);
 
         if(area1<0 && area2<0) return 0;
         else if(area1>0 && area2<=0){
@@ -70,8 +72,8 @@ int triangula_banda_area(
 //-------------------- Test --------------------
 int main(){
     // Polígono 1: 4 puntos (cuadrado)
-    double x1[] = {0,1,1,0};
-    double y1[] = {0,0,1,1};
+    double x1[] = {0,1,1,2};
+    double y1[] = {0,0,1,2};
     int idx1[] = {0,1,2,3};
     int n1 = 4;
 
