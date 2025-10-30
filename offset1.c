@@ -49,17 +49,18 @@ int build_parallel_curve(
     double *x, double *y, int n,     // Input polyline
     double h,                        // Offset distance
     double lmin, double lmax,        // Length thresholds
-    double *x0, double *y0, int nmax // Output buffer and limit
+    double *x0, double *y0, int nmax, // Output buffer and limit
+    int verbose                      // Control debug output
 ) {
     if (n < 2) {
-        printf("build_parallel_curve: n < 2, nothing to do\n");
+        if (verbose) printf("build_parallel_curve: n < 2, nothing to do\n");
         return 0;
     }
 
     int m = 0;
     Point A, B;
 
-    printf("build_parallel_curve: start n=%d h=%g lmin=%g lmax=%g nmax=%d\n", n, h, lmin, lmax, nmax);
+    if (verbose) printf("build_parallel_curve: start n=%d h=%g lmin=%g lmax=%g nmax=%d\n", n, h, lmin, lmax, nmax);
 
     /* ---- Initial offset point ---- */
     double dx = x[1] - x[0], dy = y[1] - y[0];
@@ -69,15 +70,15 @@ int build_parallel_curve(
 
     if (m < nmax) {
         x0[m] = A.x; y0[m] = A.y; m++;
-        printf("build_parallel_curve: initial A=(%g,%g) stored at m=%d\n", A.x, A.y, m);
+        if (verbose) printf("build_parallel_curve: initial A=(%g,%g) stored at m=%d\n", A.x, A.y, m);
     } else {
-        printf("build_parallel_curve: overflow storing initial point\n");
+        if (verbose) printf("build_parallel_curve: overflow storing initial point\n");
         return 0;
     }
 
     /* ---- Process each segment ---- */
     for (int i = 0; i < n - 1; i++) {
-        printf("build_parallel_curve: segment %d/%d\n", i, n-1);
+        if (verbose) printf("build_parallel_curve: segment %d/%d\n", i, n-1);
 
         Point P1 = {x[i], y[i]};
         Point P2 = {x[i+1], y[i+1]};
@@ -93,31 +94,31 @@ int build_parallel_curve(
             dx2 /= l2; dy2 /= l2;
             nx = -(dy1 + dy2);
             ny =  (dx1 + dx2);
-            printf("build_parallel_curve: vertex %d normal from two segments nx=%g ny=%g\n", i+1, nx, ny);
+            if (verbose) printf("build_parallel_curve: vertex %d normal from two segments nx=%g ny=%g\n", i+1, nx, ny);
         } else {
             nx = -(y[i+1] - y[i]);
             ny =  (x[i+1] - x[i]);
-            printf("build_parallel_curve: vertex %d normal from one segment nx=%g ny=%g\n", i+1, nx, ny);
+            if (verbose) printf("build_parallel_curve: vertex %d normal from one segment nx=%g ny=%g\n", i+1, nx, ny);
         }
 
         double nlen = sqrt(nx*nx + ny*ny);
         B.x = x[i+1] + h * nx / nlen;
         B.y = y[i+1] + h * ny / nlen;
-        printf("build_parallel_curve: computed B=(%g,%g)\n", B.x, B.y);
+        if (verbose) printf("build_parallel_curve: computed B=(%g,%g)\n", B.x, B.y);
 
         /* Check intersection between (P_i,B) and (P_{i+1},A) */
         int cross = intersect(P1, B, P2, A);
-        printf("build_parallel_curve: intersect=%d\n", cross);
+        if (verbose) printf("build_parallel_curve: intersect=%d\n", cross);
 
         if (!cross) {
             /* Segment lengths for geometric filtering */
             double l1 = (i < n - 2) ? distance(P1, (Point){x[i+2], y[i+2]}) : 1e9;
             double l2 = distance(A, B);
-            printf("build_parallel_curve: l1=%g l2=%g\n", l1, l2);
+            if (verbose) printf("build_parallel_curve: l1=%g l2=%g\n", l1, l2);
 
             if (l2 < lmin && l2 < l1) {
                 /* Skip point B — too short to be significant */
-                printf("build_parallel_curve: skip B (l2 < lmin and l2 < l1)\n");
+                if (verbose) printf("build_parallel_curve: skip B (l2 < lmin and l2 < l1)\n");
                 continue;
             }
 
@@ -131,9 +132,9 @@ int build_parallel_curve(
 
                 if (m < nmax) {
                     x0[m] = C.x; y0[m] = C.y; m++;
-                    printf("build_parallel_curve: inserted C=(%g,%g) at m=%d\n", C.x, C.y, m);
+                    if (verbose) printf("build_parallel_curve: inserted C=(%g,%g) at m=%d\n", C.x, C.y, m);
                 } else {
-                    printf("build_parallel_curve: overflow inserting C\n");
+                    if (verbose) printf("build_parallel_curve: overflow inserting C\n");
                     return 0;
                 }
             }
@@ -141,21 +142,21 @@ int build_parallel_curve(
             /* Append point B and continue */
             if (m < nmax) {
                 x0[m] = B.x; y0[m] = B.y; m++;
-                printf("build_parallel_curve: appended B=(%g,%g) at m=%d\n", B.x, B.y, m);
+                if (verbose) printf("build_parallel_curve: appended B=(%g,%g) at m=%d\n", B.x, B.y, m);
             } else {
-                printf("build_parallel_curve: overflow appending B\n");
+                if (verbose) printf("build_parallel_curve: overflow appending B\n");
                 return 0;
             }
             A = B;
 
         } else {
             /* Intersection — update A but do not store B */
-            printf("build_parallel_curve: intersection detected, updating A to B but not storing\n");
+            if (verbose) printf("build_parallel_curve: intersection detected, updating A to B but not storing\n");
             A = B;
         }
     }
 
-    printf("build_parallel_curve: finished, produced m=%d points\n", m);
+    if (verbose) printf("build_parallel_curve: finished, produced m=%d points\n", m);
     return m;
 }
 
@@ -219,7 +220,7 @@ D *_parallel5(D *x, D *y, D *h, D *lmin, D *lmax) {
     double lmax_val = lmax->p.d[0];
     
     // Call the original function with the data arrays and parameter values
-    int result = build_parallel_curve(xd, yd, n, hd, lmin_val, lmax_val, x0d, y0d, nmax);
+    int result = build_parallel_curve(xd, yd, n, hd, lmin_val, lmax_val, x0d, y0d, nmax, 1); // verbose=1
 
     // Create D structures for the output using the result size
     D *x0 = NULL;
