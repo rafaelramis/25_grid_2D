@@ -116,4 +116,88 @@ int fill_between(
 
     return nt;
 }
+/*
+ * Wrapper for r94: _fill_between4
+ *
+ * Inputs (D*):
+ *   ia, ib : integer arrays containing indices of the first and second point sets
+ *   x, y   : double arrays containing coordinates of all points
+ *
+ * Output (D*):
+ *   tri    : integer array containing generated triangles (3 indices per triangle)
+ *            Returns DCreaNulo() on error
+ *
+ * Checks performed:
+ *   1. DRun flag: if false, return DCreaNulo() silently
+ *   2. Argument types: ia, ib must be integers; x, y must be doubles
+ *   3. Argument sizes: x and y must have the same length
+ *   4. Memory management: all input D* are freed before returning
+ */
+D *_fill_between4(D *ia, D *ib, D *x, D *y) {
+    // Check if previous error occurred (DRun is false)
+    if(!DRun) {
+        // Free all input arguments
+        DLibera(ia);
+        DLibera(ib);
+        DLibera(x);
+        DLibera(y);
+        // Return a null D object silently
+        return DCreaNulo();
+    }
+
+    // Check argument types
+    if(ia->t != D_TIPO_INT || ib->t != D_TIPO_INT || x->t != D_TIPO_DOUBLE || y->t != D_TIPO_DOUBLE) {
+        DError("fill_between : bad argument type");
+        // Free all input arguments before returning
+        DLibera(ia);
+        DLibera(ib);
+        DLibera(x);
+        DLibera(y);
+        return DCreaNulo();
+    }
+
+    // Check that x and y have the same number of elements
+    if(x->n != y->n) {
+        DError("fill_between : bad argument size");
+        // Free all input arguments before returning
+        DLibera(ia);
+        DLibera(ib);
+        DLibera(x);
+        DLibera(y);
+        return DCreaNulo();
+    }
+
+    int na = ia->n;  // number of indices in first set
+    int nb = ib->n;  // number of indices in second set
+
+    // Allocate output D* array to hold triangle indices
+    // Maximum possible size: 3*(na + nb + 2)
+    D *tri = DCreaInt(3*(na+nb+2));  
+
+    // Call the original fill_between routine
+    int ntri = fill_between(
+        x->p.d,       // x coordinates
+        y->p.d,       // y coordinates
+        ia->p.i, na,  // first index set
+        ib->p.i, nb,  // second index set
+        tri->p.i      // output triangles
+    );
+
+    // Free all input arguments
+    DLibera(ia);
+    DLibera(ib);
+    DLibera(x);
+    DLibera(y);
+
+    // Check if the routine generated triangles
+    if(ntri <= 0) {
+        DLibera(tri);       // free output memory
+        return DCreaNulo(); // return null on failure
+    }
+
+    // Success: return the D* containing triangle indices
+    return tri;
+}
+
+
 
