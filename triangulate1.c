@@ -59,11 +59,6 @@ int fill_between(
         SABC = area(x[A], y[A], x[B], y[B], x[C], y[C]);
         SABD = area(x[A], y[A], x[B], y[B], x[D], y[D]);
 
-        // If both areas are negative, return 0 (invalid configuration)
-        if (SABC < 0.0 && SABD < 0.0) {
-            return 0;
-        }
-
         if (SABC < 0.0) {
             sel = 1;   // advance along ib
         } else if (SABD < 0.0) {
@@ -117,3 +112,42 @@ int fill_between(
     return nt;
 }
 
+/* ===========================================================
+   Simple test program
+   =========================================================== */
+
+int main(void)
+{
+    // Example: two polygonal curves (simple waves)
+    double x[10], y[10];
+    int ia[5], ib[5];
+    int tri[3*(5+5-2)];
+    int na = 5, nb = 5;
+
+    // First curve (bottom)
+    for (int i = 0; i < na; i++) {
+        ia[i] = i;
+        x[i] = (double)i;
+        y[i] = sin(0.5 * i);
+    }
+
+    // Second curve (top)
+    for (int j = 0; j < nb; j++) {
+        ib[j] = na + j;
+        x[na + j] = (double)j;
+        y[na + j] = 2.0 + 0.5 * sin(0.5 * j + 0.3);
+    }
+
+    int nt = fill_between(x, y, ia, na, ib, nb, tri);
+
+    printf("Generated %d triangles:\n", nt);
+    for (int k = 0; k < nt; k++) {
+        printf("  %3d: (%d, %d, %d)\n", k, tri[3*k], tri[3*k+1], tri[3*k+2]);
+    }
+
+    printf("\nTotal vertices: %d\n", na + nb);
+    for (int k = 0; k < na + nb; k++)
+        printf("  %2d: (%.3f, %.3f)\n", k, x[k], y[k]);
+
+    return 0;
+}
